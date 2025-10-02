@@ -1,10 +1,21 @@
 import pandas as pd
 import random
+import os
+import colorsys
 
+# Caminho seguro para o arquivo Excel
+BASE_DIR = os.path.dirname(__file__)
+path = os.path.join(BASE_DIR, '..', 'data', 'routes.xlsx')
 
-def getData(path='data/routes.xlsx'):
+def getData(path=path):
+    # Verifica se o arquivo existe
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Arquivo não encontrado: {path}")
+
+    # Lê os dados
     df = pd.read_excel(path, sheet_name='Itinerários')
 
+    # Linhas únicas com horário inicial e final
     lines = df.drop_duplicates(subset=['Linha'])[['Linha']]
     schedule = df.groupby('Linha')['Horário'].agg(['min', 'max']).reset_index()
     schedule.columns = ['Linha', 'Horario Saida', 'Horario Chegada']
@@ -18,11 +29,17 @@ def getData(path='data/routes.xlsx'):
         "Linha Amarela": "orange"
     }
 
+    # Gera cores aleatórias distintas usando HSV
+    def random_color():
+        h = random.random()
+        s = 0.7 + random.random() * 0.3  # saturação alta
+        v = 0.7 + random.random() * 0.3  # brilho alto
+        r, g, b = [int(c * 255) for c in colorsys.hsv_to_rgb(h, s, v)]
+        return f"#{r:02x}{g:02x}{b:02x}"
+
+    # Define a cor de cada linha
     def get_cor(linha):
-        if linha in cores_fixas:
-            return cores_fixas[linha]
-        else:
-            return "#%06x" % random.randint(0, 0xFFFFFF)
+        return cores_fixas.get(linha, random_color())
 
     lines["Cor"] = lines["Linha"].apply(get_cor)
     lines = lines.sort_values(by='Linha', ascending=True)
@@ -40,7 +57,6 @@ def getData(path='data/routes.xlsx'):
     points['LatDestino'] = points.groupby('Linha')['Latitude'].shift(-1)
     points['LongDestino'] = points.groupby('Linha')['Longitude'].shift(-1)
 
-
     # Adicionar a cor da linha
     points = points.merge(lines[['Linha', 'Cor']], on='Linha', how='left')
 
@@ -49,4 +65,3 @@ def getData(path='data/routes.xlsx'):
                      'LatOrigem', 'LongOrigem', 'LatDestino', 'LongDestino']]
 
     return lines, points
-
