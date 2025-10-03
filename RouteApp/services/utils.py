@@ -2,27 +2,30 @@ import pandas as pd
 from haversine import haversine, Unit
 import os
 
-
 BASE_DIR = os.path.dirname(__file__)
-path = os.path.join(BASE_DIR, '..', 'data', 'routes.xlsx')
+DEFAULT_PATH = os.path.join(BASE_DIR, '..', 'data',
+'routes.xlsx')
 
-def getdata(path):
+def getdata(path=None):
+    if path is None:
+        path = DEFAULT_PATH
     df = pd.read_excel(path)
 
-    # Linhas resumidas
     lines = df.copy()
     lines['Saída'] = lines.groupby('Linha')['Horário'].transform('min')
     lines['Chegada'] = lines.groupby('Linha')['Horário'].transform('max')
     lines = lines.drop_duplicates(subset=['Linha'], keep='first')
-    lines = lines[['Linha', 'Latitude', 'Longitude', 'Horário', 'Saída', 'Chegada']]
+    lines = lines[['Linha', 'Latitude',
+                   'Longitude', 'Horário', 'Saída', 'Chegada']]
     lines = lines.sort_values(by=['Linha', 'Horário'], ascending=True)
 
     # Pontos
-    points = df[['Linha','Horário', 'Latitude', 'Longitude', 'Ponto de referência','Bairro']].copy()
+    points = df[['Linha', 'Horário', 'Latitude',
+                 'Longitude', 'Ponto de referência', 'Bairro']].copy()
     points = points.sort_values(by=['Linha', 'Horário'], ascending=True)
     points['Parada'] = points.groupby('Linha').cumcount() + 1
 
-    return lines,points
+    return lines, points
 
 
 def pointsinray(points: pd.DataFrame, lat: float, lon: float, ray: float) -> pd.DataFrame:
