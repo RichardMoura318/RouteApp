@@ -1,31 +1,31 @@
 import requests
+import os
+from urllib.parse import quote_plus
 from config.settings import TOMTOM_API_KEY
 
-baseUrl = 'https://api.tomtom.com'
+
+BASE_URL = "https://api.tomtom.com"
 
 
-def geocode(address):
-    url = f"{baseUrl}/search/2/geocode/{address}.json"
-    params = {"key": TOMTOM_API_KEY, "limit": 1}
-    r = requests.get(url, params=params)
-    if r.status_code != 200 or not r.json().get("results"):
-        return None
-    pos = r.json()["results"][0]["position"]
-    return (pos["lat"], pos["lon"])
+def geocoding(address: str) -> dict:
+    try:
+        encoded_address = quote_plus(address)
+        url = f"{BASE_URL}/search/2/geocode/{encoded_address}.json"
+        params = {"key": TOMTOM_API_KEY, "limit": 1}
+
+        r = requests.get(url, params=params, timeout=10)
+
+        if r.status_code != 200:
+            return {"success": False, "data": None, "error": f"HTTP {r.status_code} - {r.reason}"}
+
+        results = r.json().get("results", [])
+        if not results:
+            return {"success": False, "data": None, "error": "Nenhum resultado encontrado"}
+
+        pos = results[0]["position"]
+        return {"success": True, "data": (pos["lat"], pos["lon"]), "error": None}
+
+    except requests.RequestException as e:
+        return {"success": False, "data": None, "error": str(e)}
 
 
-def routepoints(origem, destino):
-    url = f"https://api.tomtom.com/routing/1/calculateRoute/{origem[0]},{origem[1]}:{destino[0]},{destino[1]}/json"
-    params = {"key": TOMTOM_API_KEY, "traffic": "false"}
-    r = requests.get(url, params=params)
-
-    if r.status_code != 200:
-        print(f"Erro na API TomTom: {r.status_code}")
-        return []
-
-    data = r.json()
-    points = []
-    for leg in data["routes"][0]["legs"]:
-        for p in leg["points"]:
-            points.append((p["latitude"], p["longitude"]))
-    return points
