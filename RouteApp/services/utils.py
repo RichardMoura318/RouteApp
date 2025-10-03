@@ -1,8 +1,12 @@
 import pandas as pd
 from haversine import haversine, Unit
+import os
 
 
-def getdata(path='data/routes.xlsx'):
+BASE_DIR = os.path.dirname(__file__)
+path = os.path.join(BASE_DIR, '..', 'data', 'routes.xlsx')
+
+def getdata(path):
     df = pd.read_excel(path)
 
     # Linhas resumidas
