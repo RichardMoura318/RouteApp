@@ -20,6 +20,7 @@ def loaddata():
 
 
 lines, points = loaddata()
+
 pointsinselectedray = pd.DataFrame()
 zones = points['Bairro'].drop_duplicates().tolist()
 
@@ -93,7 +94,7 @@ if searchaddress:
         lat, lon = response['data']
         folium.Marker(
             location=[lat, lon],
-            icon=folium.Icon(icon='location-pin', prefix='fa')
+            icon=folium.Icon(icon='location-pin',color='purple', prefix='fa')
         ).add_to(map)
         folium.Circle(
             location=[lat, lon],
