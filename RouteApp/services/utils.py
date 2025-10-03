@@ -22,7 +22,7 @@ def getdata(path):
     points = points.sort_values(by=['Linha', 'Horário'], ascending=True)
     points['Parada'] = points.groupby('Linha').cumcount() + 1
 
-    return points
+    return lines,points
 
 
 def pointsinray(points: pd.DataFrame, lat: float, lon: float, ray: float) -> pd.DataFrame:
