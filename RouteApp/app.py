@@ -7,7 +7,7 @@ import pandas as pd
 from datetime import time
 
 st.set_page_config(
-    page_title='Fretados Belenus',
+    page_title='Fretados',
     layout='wide',
     initial_sidebar_state='collapsed'
 
@@ -20,14 +20,11 @@ def loaddata():
 
 
 lines, points = loaddata()
-
 pointsinselectedray = pd.DataFrame()
-zones = points['Bairro'].drop_duplicates().tolist()
 
-map = folium.Map(location=(-23.0712266, -47.0021326),
-                 zoom_start=10, zoom_control=False)
+map = folium.Map(location=(-23.0712266, -47.0021326), zoom_ststart=10, zoom_control=False)
 
-st.title('Fretados Belenus')
+st.title('Fretados')
 
 with st.sidebar:
 
@@ -48,12 +45,12 @@ with st.sidebar:
 
     st.divider()
 
-    st.markdown("### Filtros de Bairro")
-    selectedzone = st.multiselect(
-        'Bairro',
-        options=zones,
-        default=zones,
-        placeholder='Selecione o Bairro'
+    st.markdown("### Filtros de Cliente")
+    selectedcustomer = st.multiselect(
+        'Cliente',
+        options=lines['Cliente'].drop_duplicates().tolist(),
+        default=lines['Cliente'].drop_duplicates().tolist(),
+        placeholder='Selecione o Cliente'
     )
 
     st.divider()
@@ -81,20 +78,21 @@ starttime, endtime = selectedrange
 pointsplot = points.copy()
 pointsplot = pointsplot[
     (pointsplot['Linha'].isin(selectedlines)) &
-    (pointsplot['Bairro'].isin(selectedzone)) &
+    (pointsplot['Cliente'].isin(selectedcustomer)) &
     (pointsplot['Horário'] >= starttime) &
     (pointsplot['Horário'] <= endtime)
 ]
 
 
 if searchaddress:
+
     response = geocoding(searchaddress)
 
     if response['success']:
         lat, lon = response['data']
         folium.Marker(
             location=[lat, lon],
-            icon=folium.Icon(icon='location-pin',color='purple', prefix='fa')
+            icon=folium.Icon(icon='location-pin', color='purple', prefix='fa')
         ).add_to(map)
         folium.Circle(
             location=[lat, lon],
@@ -119,19 +117,19 @@ for idx, i in pointsplot.iterrows():
     refpoint = i['Ponto de referência']
 
     if currentstop == 1:
-        stoptype ='Ponto de partida'
-        pinicon = 'play'
-        pincolor = 'green'
+        stoptype = 'Ponto de partida'
+        markericon = 'play'
+        markercolor = 'green'
     elif currentstop == totalstops:
-        stoptype ='Ponto de destino'
-        pinicon = 'stop'
-        pincolor = 'red'
+        stoptype = 'Ponto de destino'
+        markericon = 'stop'
+        markercolor = 'red'
     else:
-        stoptype ='Ponto de passagem'
-        pinicon = 'bus'
-        pincolor = 'blue'
+        stoptype = 'Ponto de passagem'
+        markericon = 'bus'
+        markercolor = 'blue'
 
-    pintooltip = f"""
+    markertooltip = f"""
             <b>Linha:</b> {currentline}<br>
             <b>Coordenadas geográficas:</b> {location}<br>
             <b>Horário:</b> {stoptime}<br>
@@ -141,8 +139,8 @@ for idx, i in pointsplot.iterrows():
 
     folium.Marker(
         location=location,
-        tooltip=folium.Tooltip(pintooltip, max_width=600),
-        icon=folium.Icon(icon=pinicon, color=pincolor, prefix='fa')
+        tooltip=folium.Tooltip(markertooltip, max_width=600),
+        icon=folium.Icon(icon=markericon, color=markercolor, prefix='fa')
     ).add_to(map)
 
 st_folium(map, width=1920)
