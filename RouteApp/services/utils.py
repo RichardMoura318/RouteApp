@@ -15,12 +15,12 @@ def getdata(path=None):
     lines['Saída'] = lines.groupby('Linha')['Horário'].transform('min')
     lines['Chegada'] = lines.groupby('Linha')['Horário'].transform('max')
     lines = lines.drop_duplicates(subset=['Linha'], keep='first')
-    lines = lines[['Linha', 'Latitude',
+    lines = lines[['Cliente','Linha', 'Latitude',
                    'Longitude', 'Horário', 'Saída', 'Chegada']]
     lines = lines.sort_values(by=['Linha', 'Horário'], ascending=True)
 
     # Pontos
-    points = df[['Linha', 'Horário', 'Latitude',
+    points = df[['Cliente','Linha', 'Horário', 'Latitude',
                  'Longitude', 'Ponto de referência', 'Bairro']].copy()
     points = points.sort_values(by=['Linha', 'Horário'], ascending=True)
     points['Parada'] = points.groupby('Linha').cumcount() + 1
