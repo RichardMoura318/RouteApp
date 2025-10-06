@@ -39,8 +39,8 @@ with st.sidebar:
     st.markdown("### Filtros de Linha")
     selectedlines = st.multiselect(
         'Linhas',
-        options=lines['Cliente'].to_list(),
-        default=lines['Cliente'].to_list(),
+        options=lines['Linha'].to_list(),
+        default=lines['Linha'].to_list(),
         placeholder='Selecione as Linhas'
     )
 
