@@ -21,7 +21,6 @@ def loaddata():
 
 lines, points = loaddata()
 pointsinselectedray = pd.DataFrame()
-customers = lines['Cliente'].drop_duplicates()
 
 map = folium.Map(location=(-23.0712266, -47.0021326),
                  zoom_ststart=10, zoom_control=False)
@@ -40,8 +39,8 @@ with st.sidebar:
     st.markdown("### Filtros de Linha")
     selectedlines = st.multiselect(
         'Linhas',
-        options=lines['Linha'].to_list(),
-        default=lines['Linha'].to_list(),
+        options=lines['Cliente'].to_list(),
+        default=lines['Cliente'].to_list(),
         placeholder='Selecione as Linhas'
     )
 
@@ -50,8 +49,8 @@ with st.sidebar:
     st.markdown("### Filtros de Cliente")
     selectedcustomer = st.multiselect(
         'Cliente',
-        options=customers.tolist(),
-        default=customers.tolist(),
+        options=lines['Cliente'].to_list(),
+        default=lines['Cliente'].to_list(),
         placeholder='Selecione o Cliente'
     )
 
