@@ -1,204 +1,59 @@
 import streamlit as st
-from streamlit_folium import st_folium
-import folium
-from services.tomtom import geocoding
-from services.utils import getdata, pointsinray
-import pandas as pd
 from datetime import time
+import pandas as pd
+from services.utils import getdata, pointsinray, log
+from services.tomtom import geocoding
+from components.map_utils import create_map, add_marker, add_search_location
+from components.ui_utils import display_point_card
 
-st.set_page_config(
-    page_title='Fretados',
-    layout='wide',
-    initial_sidebar_state='collapsed'
+st.set_page_config(page_title="Fretados", layout="wide")
 
-)
+if "log_loaded" not in st.session_state:
+    log("Iniciando carregamento de dados")
+    st.session_state["log_loaded"] = True
 
-
-@st.cache_data
-def loaddata():
-    return getdata()
-
-
-lines, points = loaddata()
-pointsinselectedray = pd.DataFrame()
+lines, points = getdata()
 customers = lines['Cliente'].drop_duplicates()
-map = folium.Map(location=(-23.0712266, -47.0021326),
-                 zoom_ststart=10, zoom_control=False)
 
-st.title('Fretados')
+st.title("Fretados")
 
-with st.sidebar:
-
-    st.markdown("### Endereço de Pesquisa")
-    searchaddress = st.text_input(
-        'Endereço',
-        value='R. Comendador João Lucas Vinhedo, 300 - Distrito Industrial, Vinhedo - SP, 13280-000',
-        placeholder='Digite um endereço'
-    )
-
-    st.markdown("### Filtros de Linha")
-    selectedlines = st.multiselect(
-        'Linhas',
-        options=lines['Linha'].to_list(),
-        default=lines['Linha'].to_list(),
-        placeholder='Selecione as Linhas'
-    )
-
-    st.divider()
-
-    st.markdown("### Filtros de Cliente")
-    selectedcustomer = st.multiselect(
-        'Cliente',
-        options=customers.to_list(),
-        default=customers.to_list(),
-        placeholder='Selecione o Cliente'
-    )
-
-    st.divider()
-
-    st.markdown("### Intervalo de Operação")
-    selectedrange = st.slider(
-        'Escolha o intervalo de operação:',
-        value=(time(00, 00), time(23, 59))
-    )
-
-    st.divider()
-
-    st.markdown("### Raio de Busca")
-    ray = st.slider(
-        'Raio (m)',
-        min_value=500,
-        max_value=10000,
-        step=500,
-        value=1000
-    )
-    st.caption(f'Raio atual: **{ray:,} m**')
-
+with st.sidebar:    
+    searchaddress = st.text_input("Endereço", placeholder="Digite um endereço")
+    selectedlines = st.multiselect("Linhas", options=lines['Linha'].to_list(), default=lines['Linha'].to_list())
+    selectedcustomer = st.multiselect("Clientes", options=customers.to_list(), default=customers.to_list())
+    selectedrange = st.slider("Intervalo de operação", value=(time(0,0), time(23,59)))
+    ray = st.slider("Raio (m)", 500, 10000, 1000, step=500)
+    st.caption(f"Raio atual: **{ray:,} m**")
 
 starttime, endtime = selectedrange
-pointsplot = points.copy()
-pointsplot = pointsplot[
-    (pointsplot['Linha'].isin(selectedlines)) &
-    (pointsplot['Cliente'].isin(selectedcustomer)) &
-    (pointsplot['Horário'] >= starttime) &
-    (pointsplot['Horário'] <= endtime)
+points_filtered = points[
+    (points['Linha'].isin(selectedlines)) &
+    (points['Cliente'].isin(selectedcustomer)) &
+    (points['Horário'] >= starttime) &
+    (points['Horário'] <= endtime)
 ]
 
-
+coordinates = None
 if searchaddress:
-
     response = geocoding(searchaddress)
-
-    if response['success']:
-        lat, lon = response['data']
-        folium.Marker(
-            location=[lat, lon],
-            icon=folium.Icon(icon='location-pin', color='purple', prefix='fa')
-        ).add_to(map)
-        folium.Circle(
-            location=[lat, lon],
-            radius=ray,
-            color='purple',
-            fill=True,
-            fill_opacity=0.2).add_to(map)
-        pointsinselectedray = pointsinray(
-            points=pointsplot, lat=lat, lon=lon, ray=ray)
+    if response["success"]:
+        coordinates = response["data"]
     else:
-        st.warning(f'Endereço não encontrado.{response['error']}')
-    searchaddress = None
+        st.warning(f"Endereço não encontrado: {response['error']}")
 
+map_obj = create_map()
+if coordinates:
+    add_search_location(map_obj, coordinates, ray)
+for idx, point in points_filtered.iterrows():
+    add_marker(map_obj, point)
 
-for idx, i in pointsplot.iterrows():
+st.components.v1.html(map_obj._repr_html_(), height=600)
 
-    location = i['Latitude'], i['Longitude']
-    currentline = i['Linha']
-    totalstops = len(pointsplot[pointsplot['Linha'] == currentline])
-    currentstop = i['Parada']
-    stoptime = i['Horário']
-    refpoint = i['Ponto de referência']
-
-    if currentstop == 1:
-        stoptype = 'Ponto de partida'
-        markericon = 'play'
-        markercolor = 'green'
-    elif currentstop == totalstops:
-        stoptype = 'Ponto de destino'
-        markericon = 'stop'
-        markercolor = 'red'
+if coordinates:
+    points_in_radius = pointsinray(points_filtered, lat=coordinates[0], lon=coordinates[1], ray=ray)
+    if not points_in_radius.empty:
+        st.title(f"Pontos dentro do raio de {ray/1000} km do local selecionado")
+        for idx, point in points_in_radius.iterrows():
+            display_point_card(point, origin=coordinates)
     else:
-        stoptype = 'Ponto de passagem'
-        markericon = 'bus'
-        markercolor = 'blue'
-
-    markertooltip = f"""
-            <b>Linha:</b> {currentline}<br>
-            <b>Coordenadas geográficas:</b> {location}<br>
-            <b>Horário:</b> {stoptime}<br>
-            <b>Referência:</b> {refpoint}<br>
-            <b>Tipo de ponto:</b> {stoptype}
-            """
-
-    folium.Marker(
-        location=location,
-        tooltip=folium.Tooltip(markertooltip, max_width=600),
-        icon=folium.Icon(icon=markericon, color=markercolor, prefix='fa')
-    ).add_to(map)
-
-st_folium(map, width=1920)
-if not pointsinselectedray.empty:
-    st.title((f'Pontos dentro do raio de {ray/1000} km do local selecionado'))
-
-    for idx, i in pointsinselectedray.iterrows():
-        destinylat = i['Latitude']
-        destinylon = i['Longitude']
-        distance = i['Distância']
-        refpoint = i['Ponto de referência']
-        line = i['Linha']
-        st.markdown(
-            f"""
-            <div style="
-                border: 1px solid #eee;
-                border-radius: 12px;
-                padding: 12px 20px;
-                margin-bottom: 12px;
-                background-color: #fafafa;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-                font-family: Arial, sans-serif;
-            ">
-                <p style="margin:4px 0; font-weight:bold; font-size:16px;">
-                    Linha: {line}
-                </p>
-                <p style="margin:2px 0; font-size:14px;">
-                    Latitude: {destinylat}, Longitude: {destinylon}
-                </p>
-                <p style="margin:2px 0; font-size:14px; color: #555;">
-                    Distância do ponto selecionado: {distance} m
-                </p>
-                <p style="margin:2px 0; font-size:14px; color: #555;">
-                    Ponto de referência: {refpoint}
-                </p>
-                <a href="https://www.google.com/maps/dir/?api=1&origin={lat},{lon}&destination={destinylat},{destinylon}" target="_blank"
-                style="
-                    text-decoration: none;
-                ">
-                    <div style="
-                        display: inline-block;
-                        background-color: #FF4B4B;
-                        color: white;
-                        padding: 8px 16px;
-                        border-radius: 6px;
-                        font-weight: bold;
-                        font-size: 14px;
-                        transition: background 0.3s;
-                    " onmouseover="this.style.background='#8a2be2';" onmouseout="this.style.background='#6a0dad';">
-                    Verificar trajeto no google
-                    </div>
-                </a>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-
-else:
-    st.warning('Nenhum ponto encontrado no raio selecionado.')
+        st.warning("Nenhum ponto encontrado no raio selecionado.")

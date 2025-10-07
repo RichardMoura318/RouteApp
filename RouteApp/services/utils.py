@@ -1,10 +1,12 @@
 import pandas as pd
 from haversine import haversine, Unit
 import os
+import datetime
 
 BASE_DIR = os.path.dirname(__file__)
 DEFAULT_PATH = os.path.join(BASE_DIR, '..', 'data',
-'routes.xlsx')
+                            'routes.xlsx')
+
 
 def getdata(path=None):
     if path is None:
@@ -15,12 +17,11 @@ def getdata(path=None):
     lines['Saída'] = lines.groupby('Linha')['Horário'].transform('min')
     lines['Chegada'] = lines.groupby('Linha')['Horário'].transform('max')
     lines = lines.drop_duplicates(subset=['Linha'], keep='first')
-    lines = lines[['Cliente','Linha', 'Latitude',
+    lines = lines[['Cliente', 'Linha', 'Latitude',
                    'Longitude', 'Horário', 'Saída', 'Chegada']]
     lines = lines.sort_values(by=['Linha', 'Horário'], ascending=True)
 
-    # Pontos
-    points = df[['Cliente','Linha', 'Horário', 'Latitude',
+    points = df[['Cliente', 'Linha', 'Horário', 'Latitude',
                  'Longitude', 'Ponto de referência', 'Bairro']].copy()
     points = points.sort_values(by=['Linha', 'Horário'], ascending=True)
     points['Parada'] = points.groupby('Linha').cumcount() + 1
@@ -39,3 +40,8 @@ def pointsinray(points: pd.DataFrame, lat: float, lon: float, ray: float) -> pd.
     points = points[points['Distância'] <= ray]
     points = points.sort_values(by='Distância', ascending=True)
     return points
+
+
+def log(message:str) -> str:
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{now}] - {message}")
