@@ -42,6 +42,6 @@ def pointsinray(points: pd.DataFrame, lat: float, lon: float, ray: float) -> pd.
     return points
 
 
-def log(message:str) -> str:
+def log(message: str) -> None:
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{now}] - {message}")
