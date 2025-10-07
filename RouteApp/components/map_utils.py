@@ -3,10 +3,10 @@ import folium
 def create_map(center=(-23.0712266, -47.0021326), zoom_start=10):
     return folium.Map(location=center, zoom_start=zoom_start, zoom_control=False)
 
-def add_marker(map_obj, point):
+def add_marker(map_obj, point,totalpoints):
     location = point['Latitude'], point['Longitude']
     currentline = point['Linha']
-    totalstops = point.get('TotalStops', len(point))
+    totalstops = totalpoints
     currentstop = point['Parada']
     stoptime = point['Horário']
     refpoint = point['Ponto de referência']
