@@ -32,7 +32,7 @@ points_filtered = points[
     (points['Horário'] >= starttime) &
     (points['Horário'] <= endtime)
 ]
-
+points_filtered.to_excel('Teste.xlsx')
 coordinates = None
 if searchaddress:
     response = geocoding(searchaddress)
@@ -45,7 +45,8 @@ map_obj = create_map()
 if coordinates:
     add_search_location(map_obj, coordinates, ray)
 for idx, point in points_filtered.iterrows():
-    add_marker(map_obj, point)
+    totalpoints  = len(points_filtered[points_filtered['Linha'] == point['Linha']])
+    add_marker(map_obj, point,totalpoints)
 
 st.components.v1.html(map_obj._repr_html_(), height=600)
 
